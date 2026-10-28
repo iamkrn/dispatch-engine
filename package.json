@@ -5,6 +5,9 @@
   "engines": {
     "node": ">=24"
   },
+  "workspaces": [
+    "shared"
+  ],
   "description": "",
   "main": "index.js",
   "scripts": {
