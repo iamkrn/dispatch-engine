@@ -5,10 +5,7 @@
   "engines": {
     "node": ">=24"
   },
-  "workspaces": [
-    "shared",
-    "server"
-  ],
+"workspaces": ["shared", "server", "simulator", "client"],
   "description": "",
   "main": "index.js",
   "scripts": {

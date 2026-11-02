@@ -2,8 +2,13 @@ import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { pingDb } from './db.js';
 import { logger } from './logger.js';
+import type { AgentStore } from './state/agentStore.js';
 
-export function createApp() {
+export interface AppDeps {
+  agentStore: Pick<AgentStore, 'size' | 'lastTick' | 'lastSnapshotAt'>;
+}
+
+export function createApp(deps: AppDeps) {
   const app = express();
   app.disable('x-powered-by');
 
@@ -14,6 +19,12 @@ export function createApp() {
       db: dbOk ? 'up' : 'down',
       uptimeSeconds: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
+      agents: deps.agentStore.size,
+      lastTick: deps.agentStore.lastTick,
+      lastSnapshotAgeMs:
+        deps.agentStore.lastSnapshotAt === 0
+          ? null
+          : Date.now() - deps.agentStore.lastSnapshotAt,
     });
   });
 
