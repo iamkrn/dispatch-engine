@@ -20,11 +20,13 @@ export const requestSchema = z.object({
   id: z.string().min(1),
   requiredAgentType: agentTypeSchema,
   tenantId: tenantIdSchema,
+  requiredType: agentTypeSchema,
   priority: requestPrioritySchema,
   status: requestStatusSchema,
   location: geoPointSchema,
   requiredCapacity: z.number().int().min(1),
   createdAt: z.number().int().nonnegative(),
+  updatedAt: z.number().int().nonnegative(),
   assignedAgentId: z.string().min(1).nullable(),
 });
 
