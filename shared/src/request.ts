@@ -17,8 +17,7 @@ export const requestStatusSchema = z.enum([
 export type RequestStatus = z.infer<typeof requestStatusSchema>;
 
 export const requestSchema = z.object({
-  id: z.string().min(1),
-  requiredAgentType: agentTypeSchema,
+    id: z.string().min(1),
   tenantId: tenantIdSchema,
   requiredType: agentTypeSchema,
   priority: requestPrioritySchema,
