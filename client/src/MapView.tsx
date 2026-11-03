@@ -54,9 +54,12 @@ export function MapView({ agents }: MapViewProps) {
           getPosition: (a) => [a.location.lng, a.location.lat],
           getFillColor: (a) =>
             a.type === 'ambulance' ? AMBULANCE_COLOR : CAB_COLOR,
-          radiusUnits: 'pixels',
+           radiusUnits: 'pixels',
           getRadius: 4,
           radiusMinPixels: 3,
+          transitions: {
+            getPosition: { duration: 1000, easing: (t: number) => t },
+          },
         }),
       ],
     });
