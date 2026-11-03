@@ -10,6 +10,7 @@ export interface SimAgent extends Agent {
 export function toWire(sim: SimAgent): Agent {
   return {
     id: sim.id,
+    tenantId: sim.tenantId,
     type: sim.type,
     status: sim.status,
     location: sim.location,

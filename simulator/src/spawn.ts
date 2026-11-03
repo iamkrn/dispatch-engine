@@ -1,4 +1,4 @@
-import type { GeoPoint } from '@dispatch/shared';
+import { DEMO_TENANT_ID, type GeoPoint } from '@dispatch/shared';
 import type { CityConfig } from './config/city.js';
 import type { SimAgent } from './agentState.js';
 import { randomBetween, randomInt, type Rng } from './rng.js';
@@ -36,6 +36,7 @@ export function spawnAgents(
 
     agents.push({
       id,
+      tenantId: DEMO_TENANT_ID,
       type: isAmbulance ? 'ambulance' : 'cab',
       status: 'available',
       location: randomPointInCity(city, rng),

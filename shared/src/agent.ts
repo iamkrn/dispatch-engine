@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { geoPointSchema } from './geo.js';
+import { tenantIdSchema } from './tenant.js';
 
 export const agentTypeSchema = z.enum(['ambulance', 'cab']);
 export type AgentType = z.infer<typeof agentTypeSchema>;
@@ -9,6 +10,7 @@ export type AgentStatus = z.infer<typeof agentStatusSchema>;
 
 export const agentSchema = z.object({
   id: z.string().min(1),
+  tenantId: tenantIdSchema,
   type: agentTypeSchema,
   status: agentStatusSchema,
   location: geoPointSchema,

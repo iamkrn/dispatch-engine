@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { agentTypeSchema } from './agent.js';
 import { geoPointSchema } from './geo.js';
+import { tenantIdSchema } from './tenant.js';
 
 export const requestPrioritySchema = z.enum(['low', 'normal', 'high', 'critical']);
 export type RequestPriority = z.infer<typeof requestPrioritySchema>;
@@ -18,6 +19,7 @@ export type RequestStatus = z.infer<typeof requestStatusSchema>;
 export const requestSchema = z.object({
   id: z.string().min(1),
   requiredAgentType: agentTypeSchema,
+  tenantId: tenantIdSchema,
   priority: requestPrioritySchema,
   status: requestStatusSchema,
   location: geoPointSchema,
