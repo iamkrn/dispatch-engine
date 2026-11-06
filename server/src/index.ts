@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { config } from './config.js';
 import { closeDb, connectDb } from './db.js';
 import { logger } from './logger.js';
+import { createRequestStore } from './requests/requestStore.js';
 import { createAgentStore } from './state/agentStore.js';
 import { createClientGateway } from './ws/clientGateway.js';
 import { createSimulatorGateway } from './ws/simulatorGateway.js';
@@ -10,7 +11,8 @@ async function main(): Promise<void> {
   await connectDb();
 
   const agentStore = createAgentStore();
-  const app = createApp({ agentStore });
+  const requestStore = createRequestStore();
+  const app = createApp({ agentStore, requestStore });
   const server = app.listen(config.PORT, () => {
     logger.info({ port: config.PORT }, 'server listening');
   });

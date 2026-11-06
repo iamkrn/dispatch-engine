@@ -30,3 +30,12 @@ export const requestSchema = z.object({
 });
 
 export type Request = z.infer<typeof requestSchema>;
+
+export const createRequestBodySchema = z.strictObject({
+  requiredType: agentTypeSchema,
+  priority: requestPrioritySchema,
+  location: geoPointSchema,
+  requiredCapacity: z.number().int().min(1).max(20).default(1),
+});
+
+export type CreateRequestBody = z.infer<typeof createRequestBodySchema>;

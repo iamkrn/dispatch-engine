@@ -1,19 +1,24 @@
+import { createRequestBodySchema, DEMO_TENANT_ID } from '@dispatch/shared';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { pingDb } from './db.js';
+import { dispatchRequest } from './dispatch/dispatchService.js';
 import { logger } from './logger.js';
+import type { RequestStore } from './requests/requestStore.js';
 import type { AgentStore } from './state/agentStore.js';
 
 export interface AppDeps {
   agentStore: Pick<
     AgentStore,
-    'size' | 'lastTick' | 'lastSnapshotAt' | 'findNearby'
+    'size' | 'lastTick' | 'lastSnapshotAt' | 'findNearby' | 'get'
   >;
+  requestStore: RequestStore;
 }
 
 export function createApp(deps: AppDeps) {
   const app = express();
   app.disable('x-powered-by');
+  app.use(express.json({ limit: '10kb' }));
 
   app.get('/health', async (_req: Request, res: Response) => {
     const dbOk = await pingDb();
@@ -29,6 +34,26 @@ export function createApp(deps: AppDeps) {
           ? null
           : Date.now() - deps.agentStore.lastSnapshotAt,
     });
+  });
+
+  app.post('/requests', (req: Request, res: Response) => {
+    const parsed = createRequestBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: 'invalid_body', issues: parsed.error.issues });
+      return;
+    }
+    const decision = dispatchRequest(
+      {
+        requestStore: deps.requestStore,
+        findNearby: (center, radius) =>
+          deps.agentStore.findNearby(center, radius),
+        getAgent: (id) => deps.agentStore.get(id),
+      },
+      { tenantId: DEMO_TENANT_ID, ...parsed.data },
+    );
+    res.status(decision.assigned ? 201 : 202).json(decision);
   });
 
   if (process.env['NODE_ENV'] !== 'production') {
