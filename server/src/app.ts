@@ -2,6 +2,7 @@ import {
   createRequestBodySchema,
    DEMO_TENANT_ID,
   updateRequestStatusBodySchema,
+  type GeoPoint,
   type Request as DispatchRequest,
 } from '@dispatch/shared';
 import express from 'express';
@@ -22,6 +23,11 @@ export interface AppDeps {
   requestStore: RequestStore;
   reservations: Reservations;
   onRequestUpdated: (request: DispatchRequest, reasons?: string[]) => void;
+  onDispatch: (
+    agentId: string,
+    requestId: string,
+    destination: GeoPoint,
+  ) => void;
 }
 
 export function createApp(deps: AppDeps) {
@@ -64,6 +70,13 @@ export function createApp(deps: AppDeps) {
       { tenantId: DEMO_TENANT_ID, ...parsed.data },
     );
     deps.onRequestUpdated(decision.request, decision.reasons);
+    if (decision.assigned && decision.agentId) {
+      deps.onDispatch(
+        decision.agentId,
+        decision.request.id,
+        decision.request.location,
+      );
+    }
     res.status(decision.assigned ? 201 : 202).json(decision);
   });
 

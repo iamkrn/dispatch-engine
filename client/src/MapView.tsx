@@ -10,6 +10,7 @@ const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 
 const AMBULANCE_COLOR: [number, number, number] = [239, 68, 68];
 const CAB_COLOR: [number, number, number] = [59, 130, 246];
+const BUSY_COLOR: [number, number, number] = [250, 204, 21];
 
 const REQUEST_COLORS: Record<string, [number, number, number]> = {
   pending: [245, 158, 11],
@@ -54,8 +55,12 @@ export function MapView({ agents, requests }: MapViewProps) {
           id: 'agents',
           data: agents,
           getPosition: (a) => [a.location.lng, a.location.lat],
-          getFillColor: (a) =>
-            a.type === 'ambulance' ? AMBULANCE_COLOR : CAB_COLOR,
+           getFillColor: (a) =>
+            a.status === 'busy'
+              ? BUSY_COLOR
+              : a.type === 'ambulance'
+              ? AMBULANCE_COLOR
+              : CAB_COLOR,
           radiusUnits: 'pixels',
           getRadius: 4,
           radiusMinPixels: 3,

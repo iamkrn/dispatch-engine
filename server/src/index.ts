@@ -18,8 +18,14 @@ async function main(): Promise<void> {
     agentStore,
     requestStore,
     reservations,
-    onRequestUpdated: (request, reasons) =>
+        onRequestUpdated: (request, reasons) =>
       clientGateway.broadcastRequest(request, reasons),
+    onDispatch: (agentId, requestId, destination) => {
+      const delivered = simGateway.dispatch(agentId, requestId, destination);
+      if (!delivered) {
+        logger.warn({ agentId, requestId }, 'dispatch not delivered');
+      }
+    },
   });
   const server = app.listen(config.PORT, () => {
     logger.info({ port: config.PORT }, 'server listening');

@@ -18,7 +18,17 @@ const SERVER_WS_URL = process.env['SERVER_WS_URL'] ?? 'ws://127.0.0.1:3000/ws/si
 const rng = createRng(SEED);
 const agents = spawnAgents(COUNT, AMRITSAR, rng, Date.now());
 
+const agentById = new Map(agents.map((a) => [a.id, a]));
+
 const link = createServerLink({
+  onMessage(message) {
+    const agent = agentById.get(message.agentId);
+    if (!agent || agent.status === 'offline') return;
+    agent.target = { lat: message.destination.lat, lng: message.destination.lng };
+    agent.status = 'busy';
+    agent.missionRequestId = message.requestId;
+    console.log(`[dispatch] ${agent.id} -> request ${message.requestId}`);
+  },
   url: SERVER_WS_URL,
   simulatorId: 'sim-1',
   city: AMRITSAR.name,

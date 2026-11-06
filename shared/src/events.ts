@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { agentSchema } from './agent.js';
+import { geoPointSchema } from './geo.js';
 import { requestSchema } from './request.js';
 
 export const PROTOCOL_VERSION = 1;
@@ -27,6 +28,18 @@ export const simToServerMessageSchema = z.discriminatedUnion('type', [
   simSnapshotSchema,
 ]);
 export type SimToServerMessage = z.infer<typeof simToServerMessageSchema>;
+
+export const simDispatchSchema = z.object({
+  type: z.literal('sim.dispatch'),
+  requestId: z.string().min(1),
+  agentId: z.string().min(1),
+  destination: geoPointSchema,
+});
+
+export const serverToSimMessageSchema = z.discriminatedUnion('type', [
+  simDispatchSchema,
+]);
+export type ServerToSimMessage = z.infer<typeof serverToSimMessageSchema>;
 
 export const agentsSnapshotSchema = z.object({
   type: z.literal('agents.snapshot'),

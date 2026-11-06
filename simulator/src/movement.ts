@@ -25,6 +25,10 @@ export function stepAgent(
     if (dist <= remaining) {
       agent.location = { lat: agent.target.lat, lng: agent.target.lng };
       remaining -= dist;
+      if (agent.missionRequestId !== null) {
+        agent.missionRequestId = null;
+        agent.status = 'available';
+      }
       agent.target = randomPointInCity(city, rng);
     } else {
       agent.location = moveToward(agent.location, agent.target, remaining);

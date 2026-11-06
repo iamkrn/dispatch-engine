@@ -1,5 +1,7 @@
 import {
   PROTOCOL_VERSION,
+  serverToSimMessageSchema,
+  type ServerToSimMessage,
   type SimToServerMessage,
 } from '@dispatch/shared';
 import WebSocket from 'ws';
@@ -9,6 +11,7 @@ export interface ServerLinkOptions {
   simulatorId: string;
   city: string;
   agentCount: number;
+  onMessage: (message: ServerToSimMessage) => void;
 }
 
 export interface ServerLink {
@@ -59,6 +62,17 @@ export function createServerLink(opts: ServerLinkOptions): ServerLink {
         agentCount: opts.agentCount,
       };
       socket.send(JSON.stringify(hello));
+    });
+
+    socket.on('message', (data) => {
+      let json: unknown;
+      try {
+        json = JSON.parse(data.toString());
+      } catch {
+        return;
+      }
+      const parsed = serverToSimMessageSchema.safeParse(json);
+      if (parsed.success) opts.onMessage(parsed.data);
     });
 
     socket.on('close', (code, reason) => {

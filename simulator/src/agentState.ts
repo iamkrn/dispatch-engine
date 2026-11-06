@@ -4,6 +4,7 @@ import type { Agent, GeoPoint } from '@dispatch/shared';
 export interface SimAgent extends Agent {
   target: GeoPoint;
   headingDeg: number;
+  missionRequestId: string | null;
 }
 
 // Sirf shared schema ke fields bahar jaayenge. target/headingDeg leak nahi honge.

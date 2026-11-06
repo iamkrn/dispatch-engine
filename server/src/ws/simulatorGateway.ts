@@ -2,11 +2,13 @@ import type { Server as HttpServer, IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import {
   simToServerMessageSchema,
+  type GeoPoint,
+  type ServerToSimMessage,
   type SimHello,
   type SimSnapshot,
 } from '@dispatch/shared';
 import type { Logger } from 'pino';
-import { WebSocketServer, type RawData, type WebSocket } from 'ws';
+import { WebSocket, WebSocketServer, type RawData } from 'ws';
 
 export const SIM_WS_PATH = '/ws/sim';
 const MAX_PAYLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -18,6 +20,7 @@ export interface SimulatorGatewayOptions {
 }
 
 export interface SimulatorGateway {
+  dispatch(agentId: string, requestId: string, destination: GeoPoint): boolean;
   close(): Promise<void>;
 }
 
@@ -40,6 +43,8 @@ export function createSimulatorGateway(
     });
   }
   opts.server.on('upgrade', onUpgrade);
+
+  let active: WebSocket | null = null;
 
   wss.on('connection', (ws: WebSocket) => {
     let hello: SimHello | null = null;
@@ -76,6 +81,7 @@ export function createSimulatorGateway(
       if (msg.type === 'sim.hello') {
         if (hello) return; // duplicate hello ignore
         hello = msg;
+        active = ws;
         log.info(
           { simulatorId: msg.simulatorId, city: msg.city, agents: msg.agentCount },
           'simulator hello',
@@ -100,12 +106,26 @@ export function createSimulatorGateway(
     });
 
     ws.on('error', (err) => log.error({ err }, 'socket error'));
+    ws.on('close', () => {
+      if (active === ws) active = null;
+    });
     ws.on('close', (code, reason) =>
       log.info({ code, reason: reason.toString(), snapshots }, 'simulator disconnected'),
     );
   });
 
   return {
+       dispatch(agentId, requestId, destination) {
+      if (!active || active.readyState !== WebSocket.OPEN) return false;
+      const message: ServerToSimMessage = {
+        type: 'sim.dispatch',
+        agentId,
+        requestId,
+        destination,
+      };
+      active.send(JSON.stringify(message));
+      return true;
+    },
     close() {
       opts.server.off('upgrade', onUpgrade);
       for (const client of wss.clients) client.terminate();

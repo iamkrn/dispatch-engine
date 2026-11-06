@@ -48,6 +48,7 @@ export function spawnAgents(
       lastUpdateAt: now,
       target: randomPointInCity(city, rng),
       headingDeg: 0,
+      missionRequestId: null,
     });
   }
 
