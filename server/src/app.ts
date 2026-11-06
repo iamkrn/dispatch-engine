@@ -35,6 +35,24 @@ export function createApp(deps: AppDeps) {
   app.disable('x-powered-by');
   app.use(express.json({ limit: '10kb' }));
 
+  const allowedOrigins = (
+    process.env['CORS_ORIGINS'] ?? 'http://localhost:5173,http://127.0.0.1:5173'
+  ).split(',');
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    }
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
+
   app.get('/health', async (_req: Request, res: Response) => {
     const dbOk = await pingDb();
     res.status(dbOk ? 200 : 503).json({
