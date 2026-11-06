@@ -1,7 +1,8 @@
 import {
   createRequestBodySchema,
-  DEMO_TENANT_ID,
+   DEMO_TENANT_ID,
   updateRequestStatusBodySchema,
+  type Request as DispatchRequest,
 } from '@dispatch/shared';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -20,6 +21,7 @@ export interface AppDeps {
   >;
   requestStore: RequestStore;
   reservations: Reservations;
+  onRequestUpdated: (request: DispatchRequest, reasons?: string[]) => void;
 }
 
 export function createApp(deps: AppDeps) {
@@ -61,6 +63,7 @@ export function createApp(deps: AppDeps) {
       },
       { tenantId: DEMO_TENANT_ID, ...parsed.data },
     );
+    deps.onRequestUpdated(decision.request, decision.reasons);
     res.status(decision.assigned ? 201 : 202).json(decision);
   });
 
@@ -80,6 +83,7 @@ export function createApp(deps: AppDeps) {
       if (isTerminal(updated.status)) {
         deps.reservations.releaseByRequest(updated.id);
       }
+      deps.onRequestUpdated(updated);
       res.json(updated);
     } catch (err) {
       if (err instanceof RequestNotFoundError) {

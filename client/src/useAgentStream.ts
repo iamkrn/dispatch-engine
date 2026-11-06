@@ -1,27 +1,24 @@
-import type { Agent } from '@dispatch/shared';
+import {
+  serverToClientMessageSchema,
+  type Agent,
+  type Request as DispatchRequest,
+} from '@dispatch/shared';
 import { useEffect, useState } from 'react';
 
-const WS_URL =
-  import.meta.env.VITE_WS_URL ?? 'ws://127.0.0.1:3000/ws/client';
-
-interface AgentsMessage {
-  type: 'agents.snapshot';
-  tick: number;
-  agents: Agent[];
-}
+const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://127.0.0.1:3000/ws/client';
 
 export interface AgentStream {
   agents: Agent[];
+  requests: DispatchRequest[];
   tick: number;
   connected: boolean;
 }
 
 export function useAgentStream(): AgentStream {
-  const [state, setState] = useState<AgentStream>({
-    agents: [],
-    tick: 0,
-    connected: false,
-  });
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [requests, setRequests] = useState<Record<string, DispatchRequest>>({});
+  const [tick, setTick] = useState(0);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     let ws: WebSocket | null = null;
@@ -34,22 +31,29 @@ export function useAgentStream(): AgentStream {
 
       ws.onopen = () => {
         backoff = 500;
-        setState((s) => ({ ...s, connected: true }));
+        setConnected(true);
       };
 
       ws.onmessage = (ev) => {
+        let json: unknown;
         try {
-          const msg = JSON.parse(String(ev.data)) as AgentsMessage;
-          if (msg.type === 'agents.snapshot') {
-            setState({ agents: msg.agents, tick: msg.tick, connected: true });
-          }
+          json = JSON.parse(String(ev.data));
         } catch {
-          // kharab message ignore
+          return;
+        }
+        const parsed = serverToClientMessageSchema.safeParse(json);
+        if (!parsed.success) return;
+        const msg = parsed.data;
+        if (msg.type === 'agents.snapshot') {
+          setAgents(msg.agents);
+          setTick(msg.tick);
+        } else {
+          setRequests((prev) => ({ ...prev, [msg.request.id]: msg.request }));
         }
       };
 
       ws.onclose = () => {
-        setState((s) => ({ ...s, connected: false }));
+        setConnected(false);
         if (stopped) return;
         retry = setTimeout(connect, backoff);
         backoff = Math.min(backoff * 2, 10_000);
@@ -64,5 +68,5 @@ export function useAgentStream(): AgentStream {
     };
   }, []);
 
-  return state;
+  return { agents, requests: Object.values(requests), tick, connected };
 }

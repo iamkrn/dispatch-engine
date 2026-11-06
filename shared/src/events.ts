@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { agentSchema } from './agent.js';
+import { requestSchema } from './request.js';
 
 export const PROTOCOL_VERSION = 1;
 
@@ -26,3 +27,21 @@ export const simToServerMessageSchema = z.discriminatedUnion('type', [
   simSnapshotSchema,
 ]);
 export type SimToServerMessage = z.infer<typeof simToServerMessageSchema>;
+
+export const agentsSnapshotSchema = z.object({
+  type: z.literal('agents.snapshot'),
+  tick: z.number().int().nonnegative(),
+  agents: z.array(agentSchema),
+});
+
+export const requestUpdatedSchema = z.object({
+  type: z.literal('request.updated'),
+  request: requestSchema,
+  reasons: z.array(z.string()).optional(),
+});
+
+export const serverToClientMessageSchema = z.discriminatedUnion('type', [
+  agentsSnapshotSchema,
+  requestUpdatedSchema,
+]);
+export type ServerToClientMessage = z.infer<typeof serverToClientMessageSchema>;

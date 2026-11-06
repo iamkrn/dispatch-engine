@@ -14,7 +14,13 @@ async function main(): Promise<void> {
   const agentStore = createAgentStore();
   const requestStore = createRequestStore();
   const reservations = createReservations();
-  const app = createApp({ agentStore, requestStore, reservations });
+  const app = createApp({
+    agentStore,
+    requestStore,
+    reservations,
+    onRequestUpdated: (request, reasons) =>
+      clientGateway.broadcastRequest(request, reasons),
+  });
   const server = app.listen(config.PORT, () => {
     logger.info({ port: config.PORT }, 'server listening');
   });

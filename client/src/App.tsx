@@ -1,12 +1,17 @@
 import { MapView } from './MapView';
 import { useAgentStream } from './useAgentStream';
 
+const ACTIVE_STATUSES = ['pending', 'assigned', 'in_progress'];
+
 export default function App() {
-  const { agents, tick, connected } = useAgentStream();
+  const { agents, requests, tick, connected } = useAgentStream();
+  const activeRequests = requests.filter((r) =>
+    ACTIVE_STATUSES.includes(r.status),
+  );
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
-      <MapView agents={agents} />
+      <MapView agents={agents} requests={activeRequests} />
       <div
         style={{
           position: 'absolute',
@@ -23,6 +28,7 @@ export default function App() {
       >
         <div>{connected ? '🟢 connected' : '🔴 disconnected'}</div>
         <div>agents: {agents.length}</div>
+        <div>active requests: {activeRequests.length}</div>
         <div>tick: {tick}</div>
       </div>
     </div>

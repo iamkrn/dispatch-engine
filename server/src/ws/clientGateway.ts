@@ -1,12 +1,13 @@
 import type { Server as HttpServer, IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
+import type { Request, ServerToClientMessage } from '@dispatch/shared';
 import type { Logger } from 'pino';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { AgentStore } from '../state/agentStore.js';
 
 export const CLIENT_WS_PATH = '/ws/client';
 const BROADCAST_MS = 1000;
-const MAX_BUFFERED_BYTES = 1024 * 1024; // slow client ko skip karo
+const MAX_BUFFERED_BYTES = 1024 * 1024; 
 
 export interface ClientGatewayOptions {
   server: HttpServer;
@@ -15,6 +16,7 @@ export interface ClientGatewayOptions {
 }
 
 export interface ClientGateway {
+  broadcastRequest(request: Request, reasons?: string[]): void;
   close(): Promise<void>;
 }
 
@@ -39,7 +41,7 @@ export function createClientGateway(opts: ClientGatewayOptions): ClientGateway {
   const timer = setInterval(() => {
     if (wss.clients.size === 0) return;
     const tick = opts.agentStore.lastTick;
-    if (tick === lastSentTick) return; // naya snapshot nahi aaya
+    if (tick === lastSentTick) return; 
     lastSentTick = tick;
 
     const payload = JSON.stringify({
@@ -55,6 +57,19 @@ export function createClientGateway(opts: ClientGatewayOptions): ClientGateway {
   }, BROADCAST_MS);
 
   return {
+        broadcastRequest(request, reasons) {
+      const message: ServerToClientMessage = {
+        type: 'request.updated',
+        request,
+        ...(reasons ? { reasons } : {}),
+      };
+      const payload = JSON.stringify(message);
+      for (const client of wss.clients) {
+        if (client.readyState !== WebSocket.OPEN) continue;
+        if (client.bufferedAmount > MAX_BUFFERED_BYTES) continue;
+        client.send(payload);
+      }
+    },
     close() {
       clearInterval(timer);
       opts.server.off('upgrade', onUpgrade);

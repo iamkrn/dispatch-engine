@@ -1,28 +1,31 @@
-import { MapboxOverlay } from '@deck.gl/mapbox';
 import { ScatterplotLayer } from '@deck.gl/layers';
-import type { Agent } from '@dispatch/shared';
+import { MapboxOverlay } from '@deck.gl/mapbox';
+import type { Agent, Request as DispatchRequest } from '@dispatch/shared';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useRef } from 'react';
 
-// Amritsar center (simulator ke city config jaisa)
-const AMRITSAR_CENTER: [number, number] = [74.8723, 31.634]; // [lng, lat]
-
-// Dev ke liye MapLibre ka free demo style. Production mein apna tile provider lagega.
+const AMRITSAR_CENTER: [number, number] = [74.8723, 31.634];
 const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 
 const AMBULANCE_COLOR: [number, number, number] = [239, 68, 68];
 const CAB_COLOR: [number, number, number] = [59, 130, 246];
 
+const REQUEST_COLORS: Record<string, [number, number, number]> = {
+  pending: [245, 158, 11],
+  assigned: [34, 197, 94],
+  in_progress: [168, 85, 247],
+};
+
 interface MapViewProps {
   agents: Agent[];
+  requests: DispatchRequest[];
 }
 
-export function MapView({ agents }: MapViewProps) {
+export function MapView({ agents, requests }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<MapboxOverlay | null>(null);
 
-  // Map aur overlay ek baar banta hai
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -44,7 +47,6 @@ export function MapView({ agents }: MapViewProps) {
     };
   }, []);
 
-  // Agents badalne pe sirf layer update hoti hai, map dobara nahi banta
   useEffect(() => {
     overlayRef.current?.setProps({
       layers: [
@@ -54,16 +56,29 @@ export function MapView({ agents }: MapViewProps) {
           getPosition: (a) => [a.location.lng, a.location.lat],
           getFillColor: (a) =>
             a.type === 'ambulance' ? AMBULANCE_COLOR : CAB_COLOR,
-           radiusUnits: 'pixels',
+          radiusUnits: 'pixels',
           getRadius: 4,
           radiusMinPixels: 3,
           transitions: {
             getPosition: { duration: 1000, easing: (t: number) => t },
           },
         }),
+        new ScatterplotLayer<DispatchRequest>({
+          id: 'requests',
+          data: requests,
+          getPosition: (r) => [r.location.lng, r.location.lat],
+          getFillColor: (r) => REQUEST_COLORS[r.status] ?? [0, 0, 0],
+          getLineColor: [255, 255, 255],
+          stroked: true,
+          lineWidthUnits: 'pixels',
+          getLineWidth: 2,
+          radiusUnits: 'pixels',
+          getRadius: 10,
+          updateTriggers: { getFillColor: requests.map((r) => r.status).join() },
+        }),
       ],
     });
-  }, [agents]);
+  }, [agents, requests]);
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
 }
