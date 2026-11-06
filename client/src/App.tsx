@@ -30,6 +30,7 @@ export default function App() {
         <div>agents: {agents.length}</div>
         <div>active requests: {activeRequests.length}</div>
         <div>tick: {tick}</div>
+        
       </div>
     </div>
   );
