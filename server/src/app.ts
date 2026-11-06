@@ -1,10 +1,16 @@
-import { createRequestBodySchema, DEMO_TENANT_ID } from '@dispatch/shared';
+import {
+  createRequestBodySchema,
+  DEMO_TENANT_ID,
+  updateRequestStatusBodySchema,
+} from '@dispatch/shared';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { pingDb } from './db.js';
 import { dispatchRequest } from './dispatch/dispatchService.js';
 import { logger } from './logger.js';
-import type { RequestStore } from './requests/requestStore.js';
+import type { Reservations } from './dispatch/reservations.js';
+import { RequestNotFoundError, type RequestStore } from './requests/requestStore.js';
+import { InvalidTransitionError, isTerminal } from './requests/stateMachine.js';
 import type { AgentStore } from './state/agentStore.js';
 
 export interface AppDeps {
@@ -13,6 +19,7 @@ export interface AppDeps {
     'size' | 'lastTick' | 'lastSnapshotAt' | 'findNearby' | 'get'
   >;
   requestStore: RequestStore;
+  reservations: Reservations;
 }
 
 export function createApp(deps: AppDeps) {
@@ -47,6 +54,7 @@ export function createApp(deps: AppDeps) {
     const decision = dispatchRequest(
       {
         requestStore: deps.requestStore,
+        reservations: deps.reservations,
         findNearby: (center, radius) =>
           deps.agentStore.findNearby(center, radius),
         getAgent: (id) => deps.agentStore.get(id),
@@ -54,6 +62,36 @@ export function createApp(deps: AppDeps) {
       { tenantId: DEMO_TENANT_ID, ...parsed.data },
     );
     res.status(decision.assigned ? 201 : 202).json(decision);
+  });
+
+  app.patch('/requests/:id/status', (req: Request, res: Response) => {
+    const parsed = updateRequestStatusBodySchema.safeParse(req.body);
+    const id = req.params['id'];
+    if (!parsed.success || typeof id !== 'string') {
+      res.status(400).json({ error: 'invalid_body' });
+      return;
+    }
+    try {
+      const updated = deps.requestStore.transition(
+        DEMO_TENANT_ID,
+        id,
+        parsed.data.status,
+      );
+      if (isTerminal(updated.status)) {
+        deps.reservations.releaseByRequest(updated.id);
+      }
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof RequestNotFoundError) {
+        res.status(404).json({ error: 'request_not_found' });
+        return;
+      }
+      if (err instanceof InvalidTransitionError) {
+        res.status(409).json({ error: 'invalid_transition', message: err.message });
+        return;
+      }
+      throw err;
+    }
   });
 
   if (process.env['NODE_ENV'] !== 'production') {

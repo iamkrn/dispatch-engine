@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createRequestStore } from '../requests/requestStore.js';
 import { createGridIndex } from '../spatial/gridIndex.js';
 import { dispatchRequest } from './dispatchService.js';
+import { createReservations } from './reservations.js';
 
 const CENTER: GeoPoint = { lat: 31.634, lng: 74.8723 };
 
@@ -33,6 +34,7 @@ function setup(agents: Agent[]) {
     requestStore,
     findNearby: (c: GeoPoint, r: number) => grid.queryRadius(c, r),
     getAgent: (id: string) => map.get(id),
+    reservations: createReservations(),
   };
   return { deps, requestStore };
 }
@@ -83,6 +85,25 @@ describe('dispatchRequest', () => {
     const { deps } = setup([agent('other', 0.001, { tenantId: 'other' })]);
     const d = dispatchRequest(deps, INPUT);
     expect(d.assigned).toBe(false);
+  });
+
+  it('does not assign the same agent twice', () => {
+    const { deps } = setup([agent('only', 0.002)]);
+    const first = dispatchRequest(deps, INPUT);
+    const second = dispatchRequest(deps, INPUT);
+
+    expect(first.agentId).toBe('only');
+    expect(second.assigned).toBe(false);
+    expect(second.request.status).toBe('pending');
+  });
+
+  it('assigns a released agent again', () => {
+    const { deps } = setup([agent('only', 0.002)]);
+    const first = dispatchRequest(deps, INPUT);
+    deps.reservations.releaseByRequest(first.request.id);
+    const second = dispatchRequest(deps, INPUT);
+
+    expect(second.agentId).toBe('only');
   });
 
   it('is deterministic: same input, same decision', () => {

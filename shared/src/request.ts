@@ -39,3 +39,11 @@ export const createRequestBodySchema = z.strictObject({
 });
 
 export type CreateRequestBody = z.infer<typeof createRequestBodySchema>;
+
+export const updateRequestStatusBodySchema = z.strictObject({
+  status: requestStatusSchema.exclude(['pending', 'assigned']),
+});
+
+export type UpdateRequestStatusBody = z.infer<
+  typeof updateRequestStatusBodySchema
+>;
